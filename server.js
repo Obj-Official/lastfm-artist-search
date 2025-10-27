@@ -4,6 +4,7 @@ const axios = require('axios');
 const qs = require('querystring');
 const fs = require('fs');
 const path = require('path');
+const { limiter, errHandler } = require('./middleware');
 
 //setting up required configurations
 const app = express();
@@ -12,13 +13,15 @@ const LASTFM_KEY = "f0f089f28dcb2d93e37bb1aec0d84d0f";
 const CACHE_DIR = process.env.CACHE_DIR || path.join(__dirname, 'cache');
 const API_BASE = 'https://ws.audioscrobbler.com/2.0/?method=artist.search&format=json';
 
+//use middleware
+app.use(express.json());
+app.use(limiter);
+
 //check for the presence of API key in the environment
 if (!LASTFM_KEY) {
   console.error('The LASTFM API KEY is missing.');
   process.exit(1);
 }
-
-app.use(express.json());
 
 // API endpoint for artist search
 app.get('/search', async (req, res) => {
@@ -88,6 +91,7 @@ app.get('/search', async (req, res) => {
 
   } catch (err) {
     console.error('Search error:', err.message || err);
+    app.use(errHandler);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
